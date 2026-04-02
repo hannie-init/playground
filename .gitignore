@@ -1,0 +1,40 @@
+### Gradle ###
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+### IDE ###
+.idea/
+.run/
+*.iml
+.vscode/
+*.swp
+
+### Java ###
+*.class
+*.jar
+!libs/*.jar
+
+### Spring Boot ###
+target/
+out/
+
+### Logs ###
+*.log
+logs/
+
+### OS ###
+.DS_Store
+Thumbs.db
+
+### QueryDSL generated ###
+src/main/generated/
+
+#### Secrets ###
+#application-prod.yml
+#application-staging.yml
+#src/main/resources/application*.yml
+#src/main/resources/application*.yaml
+
+### AI
+settings.local.json

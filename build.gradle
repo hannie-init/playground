@@ -1,0 +1,165 @@
+buildscript {
+    ext {
+        queryDslVersion = "5.0.0"
+        springBootVersion = "4.0.5"
+    }
+}
+
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.0.5'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'com.diffplug.spotless' version '6.25.0'
+}
+
+group = 'com.kakaohealthcare'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Spring Boot Starters
+    implementation "org.springframework.boot:spring-boot-starter-data-jpa:${springBootVersion}"
+    implementation "org.springframework.boot:spring-boot-starter-data-redis:${springBootVersion}"
+    implementation "org.springframework.boot:spring-boot-starter-web:${springBootVersion}"
+    implementation "org.springframework.boot:spring-boot-starter-validation:${springBootVersion}"
+    implementation "org.springframework.boot:spring-boot-starter-thymeleaf:${springBootVersion}"
+    implementation "org.springframework.boot:spring-boot-starter-actuator:${springBootVersion}"
+
+    // Lombok (JDK 25 지원 버전)
+    compileOnly 'org.projectlombok:lombok:1.18.38'
+    annotationProcessor 'org.projectlombok:lombok:1.18.38'
+
+    // MySQL (groupId 변경: mysql → com.mysql)
+    runtimeOnly 'com.mysql:mysql-connector-j'
+
+    // JSON
+    implementation 'org.json:json:20240303'
+
+    // Swagger / OpenAPI
+    // springfox는 Jakarta EE 미지원으로 springdoc-openapi로 대체
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.0'
+
+    // Jackson
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-xml'
+
+    // Apache Commons
+    implementation 'org.apache.commons:commons-lang3'
+
+    // Thymeleaf Layout
+    implementation 'nz.net.ultraq.thymeleaf:thymeleaf-layout-dialect'
+
+    // Logback Logstash
+    implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
+
+    // Google Cloud (아마 안쓸듯)
+    implementation platform('com.google.cloud:libraries-bom:26.59.0')
+    implementation 'com.google.cloud:google-cloud-logging-logback:0.131.11-alpha'
+
+    // Micrometer Tracing (spring-cloud-starter-sleuth 대체 - Boot 3+ 표준)
+    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
+    implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
+
+    // Spring Retry
+    implementation 'org.springframework.retry:spring-retry'
+
+    // Guava
+    implementation 'com.google.guava:guava:33.4.0-jre'
+
+    // QueryDSL (jakarta classifier 필수 - Boot 3+부터 Jakarta EE 사용)
+    implementation "com.querydsl:querydsl-jpa:${queryDslVersion}:jakarta"
+    annotationProcessor "com.querydsl:querydsl-apt:${queryDslVersion}:jakarta"
+    annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
+    annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
+
+    // Prometheus
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+
+    // Resilience4j (Spring Cloud BOM 버전 사용)
+    implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j'
+
+    // Apache POI
+    implementation 'org.apache.poi:poi:5.3.0'
+    implementation 'org.apache.poi:poi-ooxml:5.3.0'
+
+    // Local libs
+    implementation fileTree(dir: 'libs', includes: ['*.jar'])
+
+    // Config Processor
+    annotationProcessor "org.springframework.boot:spring-boot-configuration-processor:${springBootVersion}"
+
+
+
+
+    // Netty DNS (Apple Silicon M1/M2/M3 Mac 환경용, 불필요 시 제거)
+    implementation group: 'io.netty', name: 'netty-resolver-dns-native-macos', classifier: 'osx-aarch_64'
+
+    // Test
+    testImplementation "org.springframework.boot:spring-boot-starter-test:${springBootVersion}"
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+dependencyManagement {
+    imports {
+        // Spring Cloud 2025.1.x = Spring Boot 4.0.x 호환
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:2025.1.1"
+    }
+}
+
+// QueryDSL Q클래스 생성 경로
+def querydslDir = layout.buildDirectory.dir("generated/querydsl").get().asFile
+
+sourceSets {
+    main {
+        java {
+            srcDirs += [querydslDir]
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.generatedSourceOutputDirectory = file(querydslDir)
+}
+
+tasks.withType(JavaExec).configureEach {
+    jvmArgs += '--enable-native-access=ALL-UNNAMED'
+}
+
+tasks.named('test') {
+    jvmArgs += '--enable-native-access=ALL-UNNAMED'
+    useJUnitPlatform()
+}
+
+// Git hooks setup — run `./gradlew installGitHooks` after cloning
+tasks.register('installGitHooks', Exec) {
+    group = 'setup'
+    description = 'Registers .githooks as the git hooks directory for this repo.'
+    commandLine 'git', 'config', 'core.hooksPath', '.githooks'
+    doLast {
+        println 'Git hooks installed from .githooks/'
+    }
+}
+
+spotless {
+    java {
+        googleJavaFormat('1.22.0').aosp()  // AOSP: 4-space indent (Google 기본은 2-space)
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+}
