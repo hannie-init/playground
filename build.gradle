@@ -9,7 +9,6 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '4.0.5'
     id 'io.spring.dependency-management' version '1.1.7'
-    id 'com.diffplug.spotless' version '6.25.0'
 }
 
 group = 'com.kakaohealthcare'
@@ -145,21 +144,3 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
-// Git hooks setup — run `./gradlew installGitHooks` after cloning
-tasks.register('installGitHooks', Exec) {
-    group = 'setup'
-    description = 'Registers .githooks as the git hooks directory for this repo.'
-    commandLine 'git', 'config', 'core.hooksPath', '.githooks'
-    doLast {
-        println 'Git hooks installed from .githooks/'
-    }
-}
-
-spotless {
-    java {
-        googleJavaFormat('1.22.0').aosp()  // AOSP: 4-space indent (Google 기본은 2-space)
-        removeUnusedImports()
-        trimTrailingWhitespace()
-        endWithNewline()
-    }
-}
